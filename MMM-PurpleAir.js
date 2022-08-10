@@ -189,21 +189,21 @@ Module.register("MMM-PurpleAir", {
 	
 	getAQIMessage(aqi)  {
 		if (aqi <= 50) {
-			return "Satisfactory, air pollution poses little or no risk"
+			return "Satisfactory, little or no risk"
 		}
 		if (aqi <= 100) {
-			return "Acceptable; moderate health concern for very sensitive people"
+			return "Acceptable; moderate health concern"
 		}
 		if (aqi <= 150) {
-			return "Sensitive groups may experience health effects"
+			return "Possible health effects"
 		}
 		if (aqi <= 200) {
 			return "Health effects likely"
 		}
 		if (aqi <= 300) {
-			return "Health warnings of emergency conditions"
+			return "Emergency conditions!"
 		}
-		return "Health alert serious health effects!"
+		return "Health alert! Serious health effects!"
 	},
 	
 	calcAQI(Cp, Ih, Il, BPh, BPl) {
