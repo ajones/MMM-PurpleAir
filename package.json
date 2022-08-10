@@ -1,0 +1,15 @@
+{
+    "name": "magic-mirror-module-purple-air",
+    "version": "1.0.0",
+    "description": "",
+    "main": "MMM-PurpleAir.js",
+    "author": "Aaron Jones",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ajones/MMM-PurpleAir.git"
+    },
+    "dependencies": {
+        "request": "^2.88.2"
+    }
+}

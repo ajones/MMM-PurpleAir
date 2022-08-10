@@ -1,0 +1,14 @@
+.sensor-name {
+    font-size: 30px;
+    margin: 0;
+}
+
+.sensor-value {
+    font-size: 40px;
+    margin: 0;
+}
+
+.sensor-value-description {
+    font-size: 20px;
+    margin: 0;
+}
