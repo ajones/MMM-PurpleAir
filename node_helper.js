@@ -12,17 +12,21 @@ module.exports = NodeHelper.create({
         console.log(this.name + ' helper started ...');
     },
 
-    socketNotificationReceived: function(notification, req) {
-        console.log(req)
-        if (notification === 'MMM-PurpleAir.Request') {
+    socketNotificationReceived: function(notificationName, data) {
+        console.log(data)
+        const {
+          responseKey,
+          req,
+        } = data
+        if (notificationName === 'MMM-PurpleAir.Request') {
             var that = this;
             request(req, function(error, response, body) {
                 console.log(`MMM-PurpleAir response code: ${response.statusCode}`);
                 
                 // console.log("send notification: "+payload.id);
-                that.sendSocketNotification('MMM-PurpleAir.Response', {
+                that.sendSocketNotification(responseKey, {
                     error,
-                    req,
+                    request,
                     response
                 });
             });

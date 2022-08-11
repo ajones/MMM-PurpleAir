@@ -100,8 +100,8 @@ Module.register("MMM-PurpleAir", {
 	// messages received from from your node helper (NOT other modules or the system)
 	// payload is a notification dependent data structure, up to you to design between module and node_helper
 	socketNotificationReceived: function(notification, payload) {
-		Log.info(this.name + " received a socket notification: " + notification + " - Payload: " + payload);
-		if(notification === "MMM-PurpleAir.Response"){
+		Log.info(`${this.name} received a socket notification: ${notification} - Payload: ${payload}`);
+		if(notification === `MMM-PurpleAir.Response.${this.config.sensorIndex}`){
 			this.currentData = JSON.parse(payload.response.body)
 			
 			// tell mirror runtime that our data has changed,
@@ -253,9 +253,12 @@ Module.register("MMM-PurpleAir", {
         this.sendSocketNotification(
 			'MMM-PurpleAir.Request',
 			{
-				url: `https://api.purpleair.com/v1/sensors/${this.config.sensorIndex}`,
-				headers: {
-					"X-API-Key": this.config.apiKey,
+				responseKey: `MMM-PurpleAir.Response.${this.config.sensorIndex}`,
+				req: {
+					url: `https://api.purpleair.com/v1/sensors/${this.config.sensorIndex}`,
+					headers: {
+						"X-API-Key": this.config.apiKey,
+					}
 				}
 			}
 		);
