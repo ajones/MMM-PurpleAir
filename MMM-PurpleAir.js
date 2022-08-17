@@ -62,7 +62,7 @@ Module.register("MMM-PurpleAir", {
 	// messages received from from your node helper (NOT other modules or the system)
 	// payload is a notification dependent data structure, up to you to design between module and node_helper
 	socketNotificationReceived: function(notification, payload) {
-		Log.info(`${new Date().getTime()} ${this.name} received a socket notification: ${notification} - Payload: ${payload}`);
+		Log.info(`${this.name} received a socket notification: ${notification} - Payload: ${payload}`);
     if(notification === this.notificationName(NotificationType.Response)){
 			this.currentData = JSON.parse(payload.response.body)
 			// tell mirror runtime that our data has changed,
