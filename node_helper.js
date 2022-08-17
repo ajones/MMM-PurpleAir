@@ -21,14 +21,14 @@ module.exports = NodeHelper.create({
       var that = this;
       const { responseKey, req } = data
       if (notificationName === `${this.name}.${NotificationType.Request}`) {
-          request(req, function(error, response, body) {
-              console.log(`${that.name} ${responseKey} response code: ${response.statusCode}`);
-              that.sendSocketNotification(responseKey, {
-                  error,
-                  request,
-                  response
-              });
-          });
+        request(req, function(error, response, body) {
+            console.log(`${that.name} ${responseKey} response code: ${response.statusCode}`);
+            that.sendSocketNotification(responseKey, {
+                error,
+                request,
+                response
+            });
+        });
       }
     }
 });
