@@ -1,4 +1,8 @@
-const DefaultUpdateIntervalSec = 30;
+
+const NotificationType = {
+  Request: "request",
+  Response: "response",
+}
 
 Module.register("MMM-PurpleAir", {
 	updateIntervalSec:  null,
@@ -13,69 +17,29 @@ Module.register("MMM-PurpleAir", {
 	// anything here in defaults will be added to the config data
 	// and replaced if the same thing is provided in config
 	defaults: {
-		message: "default message if none supplied in config.js"
+		debug: false,
+    apiKey: "",
+    sensorIndex:"",
+    updateIntervalSec: 30,
+    initialLoadDelaySec: 3, 
 	},
 
 	init: function(){
-		Log.info(this.name + " is in init!");
-
+		Log.info(this.name + " is initializing...");
 	},
 
 	start: function(){
-		Log.info(this.name + " is starting!");
-		
-		this.updateIntervalSec = this.config.updateIntervalSec || DefaultUpdateIntervalSec;
-		this.initialLoadDelaySec = this.config.initialLoadDelay || 3;
-		
-		this.scheduleUpdate(this.initialLoadDelaySec);
+		Log.info(`${this.name} is starting...`);		
+
+    Log.info(`${this.name} using this configuration ${JSON.stringify(this.config)}`);		
+    
+		this.scheduleUpdate(this.config.initialLoadDelaySec);
 	},
 
-	loaded: function(callback) {
-		Log.info(this.name + " is loaded!");
-		callback();
-	},
-
-	// return list of other functional scripts to use, if any (like require in node_helper)
-	getScripts: function() {
-	return	[
-			// sample of list of files to specify here, if no files,do not use this routine, or return empty list
-
-			//'script.js', // will try to load it from the vendor folder, otherwise it will load is from the module folder.
-			//'moment.js', // this file is available in the vendor folder, so it doesn't need to be available in the module folder.
-			//this.file('anotherfile.js'), // this file will be loaded straight from the module folder.
-			//'https://code.jquery.com/jquery-2.2.3.min.js',  // this file will be loaded from the jquery servers.
-		]
-	}, 
-
-	/*
-	// return list of stylesheet files to use if any
-	getStyles: function() {
-		return 	[
-			// sample of list of files to specify here, if no files, do not use this routine, , or return empty list
-
-			//'script.css', // will try to load it from the vendor folder, otherwise it will load is from the module folder.
-			//'font-awesome.css', // this file is available in the vendor folder, so it doesn't need to be avialable in the module folder.
-			//this.file('anotherfile.css'), // this file will be loaded straight from the module folder.
-			//'https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css',  // this file will be loaded from the bootstrapcdn servers.
-		]
-	},
-	*/
-	// Define required scripts.
+	
 	getStyles: function () {
 		return ["purpleair.css"];
 	},
-
-	// return list of translation files to use, if any
-	/*getTranslations: function() {
-		return {
-			// sample of list of files to specify here, if no files, do not use this routine, , or return empty list
-
-			// en: "translations/en.json",  (folders and filenames in your module folder)
-			// de: "translations/de.json"
-		}
-	}, */ 
-
-
 
 	// only called if the module header was configured in module config in config.js
 	getHeader: function() {
@@ -85,51 +49,41 @@ Module.register("MMM-PurpleAir", {
 	// messages received from other modules and the system (NOT from your node helper)
 	// payload is a notification dependent data structure
 	notificationReceived: function(notification, payload, sender) {
-		// once everybody is loaded up
-		if(notification==="ALL_MODULES_STARTED"){
-			// send our config to our node_helper
-			this.sendSocketNotification("CONFIG",this.config)
-		}
-		if (sender) {
-			Log.log(this.name + " received a module notification: " + notification + " from sender: " + sender.name);
-		} else {
-			Log.log(this.name + " received a system notification: " + notification);
-		}
+    Log.info(`${this.name} received a module notification: ${JSON.stringify({notification, sender:sender?.name})}`);
 	},
+
+  notificationName: function (notifType) {
+    if (notifType == NotificationType.Request){
+      return `${this.name}.${notifType}`  
+    }
+    return `${this.name}.${notifType}.${this.config.sensorIndex}`
+  },
 
 	// messages received from from your node helper (NOT other modules or the system)
 	// payload is a notification dependent data structure, up to you to design between module and node_helper
 	socketNotificationReceived: function(notification, payload) {
-		Log.info(`${this.name} received a socket notification: ${notification} - Payload: ${payload}`);
-		if(notification === `MMM-PurpleAir.Response.${this.config.sensorIndex}`){
+		Log.info(`${new Date().getTime()} ${this.name} received a socket notification: ${notification} - Payload: ${payload}`);
+    if(notification === this.notificationName(NotificationType.Response)){
 			this.currentData = JSON.parse(payload.response.body)
-			
 			// tell mirror runtime that our data has changed,
 			// we will be called back at GetDom() to provide the updated content
 			this.updateDom(1000)
 		}
 	},
 
-	// system notification your module is being hidden
-	// typically you would stop doing UI updates (getDom/updateDom) if the module is hidden
-	suspend: function(){
-
-	},
-
-	// system notification your module is being unhidden/shown
-	// typically you would resume doing UI updates (getDom/updateDom) if the module is shown
-	resume: function(){
-
-	},
-
+  
+  /**
+   * Formula for the AQI calculation comes from PurpleAir's 
+   * support team and can be viewed here 
+   * https://docs.google.com/document/d/15ijz94dXJ-YAZLi9iZ_RaBwrZ4KtYeCy08goGBwnbCU/edit
+   * @param {float} pm value extracted from the purple air sensor json
+   */
 	aqiFromPM(pm) {
-		if (pm < 0) {
+		// invalid value
+    if (pm < 0 || pm > 1000) {
 			return 0
 		}
-		if (pm > 1000) {
-			return 0
-		}
-	
+
 		if (pm > 350.5) {
 			return this.calcAQI(pm, 500, 401, 500, 350.5)
 		} else if (pm > 250.5) {
@@ -145,10 +99,18 @@ Module.register("MMM-PurpleAir", {
 		} else if (pm >= 0) {
 			return this.calcAQI(pm, 50, 0, 12, 0)
 		}
-	
+    
+    // likely an error in the pm grouping above
 		return 0
 	},
 
+  /**
+   * Creates a short message about the current AQI value.
+   * Breaks defined by the PurpleAIR provided formulas
+   * 
+   * @param {*} aqi value derived from aqiFromPM()
+   * @returns string short message
+   */
 	getAQIDescription(aqi) {
 		if (aqi <= 50) {
 			return "Good"
@@ -168,6 +130,12 @@ Module.register("MMM-PurpleAir", {
 		return "Hazardous"
 	},
 	
+  /**
+   * Creates a nice color representation of the current aqi
+   * 
+   * @param {*} aqi 
+   * @returns string emoji color
+   */
 	iconForAQI(aqi) {
 		if (aqi <= 50) {
 			return "🟩"
@@ -187,6 +155,12 @@ Module.register("MMM-PurpleAir", {
 		return "💀"
 	},
 	
+  /**
+   * Longer form message representing the given AQI
+   * 
+   * @param {*} aqi 
+   * @returns 
+   */
 	getAQIMessage(aqi)  {
 		if (aqi <= 50) {
 			return "Satisfactory, little or no risk"
@@ -206,6 +180,11 @@ Module.register("MMM-PurpleAir", {
 		return "Health alert! Serious health effects!"
 	},
 	
+  /**
+   * Formula for the AQI calculation comes from PurpleAir's 
+   * support team and can be viewed here 
+   * https://docs.google.com/document/d/15ijz94dXJ-YAZLi9iZ_RaBwrZ4KtYeCy08goGBwnbCU/edit
+   */
 	calcAQI(Cp, Ih, Il, BPh, BPl) {
 		const a = (Ih - Il)
 		const b = (BPh - BPl)
@@ -248,12 +227,17 @@ Module.register("MMM-PurpleAir", {
 		return wrapper;
 	},
 
+
+  /**
+   * Sends a message out to the node_helper that will call for updated sensor data
+   */
 	getData: function() {
-        Log.info('MMM-PurpleAir: refreshing sensor data...');
-        this.sendSocketNotification(
-			'MMM-PurpleAir.Request',
+    Log.info('MMM-PurpleAir: refreshing sensor data...');
+    this.sendSocketNotification(
+			//'MMM-PurpleAir.Request',
+      this.notificationName(NotificationType.Request),
 			{
-				responseKey: `MMM-PurpleAir.Response.${this.config.sensorIndex}`,
+				responseKey: this.notificationName(NotificationType.Response),
 				req: {
 					url: `https://api.purpleair.com/v1/sensors/${this.config.sensorIndex}`,
 					headers: {
@@ -264,13 +248,19 @@ Module.register("MMM-PurpleAir", {
 		);
 	},
 
-    scheduleUpdate: function(delaySec) {
+  /**
+   * Schedules a getData call after delaySec
+   * 
+   * @param {number} delaySec 
+   */
+  scheduleUpdate: function(delaySec) {
 		const that = this;
-		const nextLoadMillis = (delaySec || this.updateIntervalSec) * 1000;
-		
+		const nextLoadMillis = (delaySec || this.config.updateIntervalSec) * 1000;
+    Log.info(`MMM-PurpleAir: scheduling data update for ${this.config.sensorIndex} in ${nextLoadMillis} millis...`);
+
 		setTimeout(function() {
 			that.getData();
-			that.scheduleUpdate(nextLoadMillis);
+			that.scheduleUpdate();
 		}, nextLoadMillis);
 	},
 })
